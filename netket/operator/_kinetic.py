@@ -83,26 +83,13 @@ class KineticEnergy(ContinuousOperator):
         def logpsi_x(x):
             return logpsi(params, x)
 
-<<<<<<< Updated upstream
-        dlogpsi_x = jax.grad(logpsi_x)
-
-        y, f_jvp = jax.linearize(dlogpsi_x, x)
-        basis = jnp.eye(x.shape[0], dtype=y.dtype)
-=======
         dlogpsi_x = jacrev(logpsi_x)
->>>>>>> Stashed changes
 
         dp_dx2 = jnp.diag(jacfwd(dlogpsi_x)(x)[0].reshape(x.shape[0],x.shape[0]))
         dp_dx = dlogpsi_x(x)[0][0] ** 2
 
-<<<<<<< Updated upstream
-        dp_dx = dlogpsi_x(x) ** 2
-
-        res = -0.5 * jnp.sum(mass * (dp_dx2 + dp_dx), axis=-1)
-        return res
-=======
         return -0.5 * jnp.sum(mass * (dp_dx2 + dp_dx), axis=-1)
->>>>>>> Stashed changes
+
 
     @partial(jax.vmap, in_axes=(None, None, None, 0, None))
     def _expect_kernel_batched(
