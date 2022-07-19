@@ -129,7 +129,6 @@ class DeepSetRelDistance(nn.Module):
         x = x.reshape(-1, sdim)
 
         dis = -x[jnp.newaxis, :, :] + x[:, jnp.newaxis, :]
-
         dis = dis[jnp.triu_indices(n_particles, 1)]
         dis = L[jnp.newaxis, :] / 2.0 * jnp.sin(jnp.pi * dis / L[jnp.newaxis, :])
         return dis

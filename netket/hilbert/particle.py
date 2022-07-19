@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from typing import Tuple, Union
-import numpy as np
+
 from .continuous_hilbert import ContinuousHilbert
 
 
@@ -23,6 +23,7 @@ class Particle(ContinuousHilbert):
     def __init__(
         self,
         N: int,
+        n_per_spin: Tuple[int,...],
         L: Tuple[float, ...],
         pbc: Union[bool, Tuple[bool, ...]],
     ):
@@ -49,13 +50,8 @@ class Particle(ContinuousHilbert):
         if isinstance(pbc, bool):
             pbc = [pbc] * len(L)
 
-        if np.any(np.isinf(np.array(L) * np.array(pbc))):
-            raise ValueError(
-                "If you do have periodic boundary conditions the size of the box (L) "
-                "must be finite."
-            )
-
         self._N = N
+        self._n_per_spin = n_per_spin
 
         super().__init__(L, pbc)
 
@@ -69,10 +65,15 @@ class Particle(ContinuousHilbert):
         return self._N
 
     @property
+    def n_per_spin(self) -> int:
+        return self._n_per_spin
+
+    @property
     def _attrs(self):
-        return (self._N, self.extent, self.pbc)
+        return (self._N, self.extent, self.pbc, self.n_per_spin)
 
     def __repr__(self):
-        return "ContinuousParticle(N={}, d={})".format(
-            self.n_particles, len(self.extent)
+        return "ContinuousParticle(N={}, d={}, n_up={})".format(
+            self.n_particles, len(self.extent), self.n_per_spin
         )
+

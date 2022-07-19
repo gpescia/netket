@@ -21,6 +21,11 @@ from netket.hilbert import ContinuousHilbert, Particle
 from netket.utils.dispatch import dispatch
 
 
+def take_sub(key, x, n):
+    key, subkey = jax.random.split(key)
+    ind = jax.random.choice(subkey, jnp.arange(0, x.shape[0], 1), replace=False, shape=(n,))
+    return x[ind, :]
+
 @dispatch
 def random_state(hilb: Particle, key, batches: int, *, dtype):
     """Positions particles w.r.t. normal distribution,
@@ -39,7 +44,6 @@ def random_state(hilb: Particle, key, batches: int, *, dtype):
     gaussian = jax.random.normal(
         key, shape=(batches, hilb.size), dtype=nkjax.dtype_real(dtype)
     )
-
     width = min_modulus / (4.0 * hilb.n_particles)
     # The width gives the noise level. In the periodic case the
     # particles are evenly distributed between 0 and min(L). The
@@ -48,10 +52,26 @@ def random_state(hilb: Particle, key, batches: int, *, dtype):
     # positions the noise level should be smaller than half this distance.
     # We choose width = min(L) / (4*hilb.N)
     noise = gaussian * width
+    """ 
     uniform = jnp.tile(jnp.linspace(0.0, min_modulus, hilb.size), (batches, 1))
 
-    rs = jnp.where(np.equal(boundary, False), gaussian, (uniform + noise) % modulus)
+    select = np.equal(boundary, False)
+    rs = select * gaussian + np.logical_not(select) * ((uniform + noise) % modulus)
+    """
 
+    key = jax.random.split(key, num=batches)
+
+    sdim = len(hilb.extent)
+    n = int(jnp.ceil(hilb.n_particles ** (1 / sdim)))
+    xs = jnp.linspace(0, min(hilb.extent), n)
+    uniform = jnp.array(jnp.meshgrid(xs, xs, xs)).T.reshape(-1, sdim)
+    uniform = jnp.tile(uniform, (batches, 1, 1))
+
+    uniform = jax.vmap(take_sub, in_axes=(0, 0, None)) \
+        (key, uniform, hilb.n_particles).reshape(batches, -1)
+
+    select = np.equal(boundary, False)
+    rs = select * gaussian + np.logical_not(select) * ((uniform + noise) % modulus)
     return jnp.asarray(rs, dtype=dtype)
 
 
